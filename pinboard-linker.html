@@ -5,6 +5,19 @@
 	</head>
 	<body>
 		<script src="pinboard-linker.js" type="text/javascript"></script>
-		<code class="terminal"></code>
+		<script src="pinboard-linker-ui.js" type="text/javascript"></script>
+		<script src="console.js" type="text/javascript"></script>
+
+		<div id="ui_login">
+			<form action="javascript:" onsubmit="submit_login(this.parentNode.id, this.form_api_token.value, this.form_proxy.value)">
+  				API Token: <input type="text" name="form_api_token"><br>
+  				JSONP Proxy: <input type="text" name="form_proxy" value="http://whateverorigin.org/get?url="><br>
+  				<input type="submit" value="Submit">
+			</form>
+		</div>
+
+		<div id="ui_dynamic"></div>
+
+		<code id="console"></code>
 	</body>
 </html>

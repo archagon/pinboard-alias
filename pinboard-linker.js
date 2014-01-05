@@ -28,37 +28,109 @@ Potential future features:
 	* destructive aliases: docs ~> documentation, which replaces all
 	  'docs' with 'documentation' (you can do this manually through the web interface
 	  in the interim)
-	* convert to JS (or use a Python to JS converter) for UI prettyness
 */
 
 // TODO: GUI
 // TODO: token
 // TODO: add "dirty" flag to sync
 
+/////////////////////////////
+// CONFIGURABLE PARAMETERS //
+/////////////////////////////
+
+var settings_tag_name = "pinboard-linker-settings";
+
+/////////////////////////////////
+// NON-CONFIGURABLE PARAMETERS //
+/////////////////////////////////
+
+var version = "0.1";
+
+////////////////////
+// GLOBAL OBJECTS //
+////////////////////
+
+var pinboard_object = null;
+var synonym_map = {};
+var dirty = false;
+
 //////////////////////
 // HELPER FUNCTIONS //
 //////////////////////
-
-function pr_symbol() { return "&#9883;" + " "; }
-function pr(string) { $(".terminal").append(string); }
-function msg(string) { $(".terminal").append(pr_symbol() + string); }
-function err(string) { msg(string); }
-function warn(string) { msg(string); }
 
 ////////////////////
 // MAIN FUNCTIONS //
 ////////////////////
 
-function startup()
+function startup(username, token, proxy)
 {
-	msg("asdf!");
+	msg("Pinboard linker script version " + version + ".");
+
+	// var login = get_login();
+
+	pinboard_object = new Pinboard(username, token, proxy);
+
+	// try:
+	// 	if len(login) == 1:
+	// 		pinboard_object = pinboard.connect(token=login[0])
+	// 	else:
+	// 		pinboard_object = pinboard.open(login[0], login[1])
+	// except HTTPError, e:
+	// 	if e.code == 401:
+	// 		err("Oops! Did you enter the correct login information?")
+	// 	else:
+	// 		err("Error! Unknown exception: " + str(e))
+	// except Exception, e:
+	// 	err("Error! Unknown exception: " + str(e))
+	// finally:
+	// 	pass
+
+	// if pinboard_object is not None:
+	// 	msg("Logged in!")
+	// 	test_suite()
+}
+
+function get_login()
+{
+	var login = get_cached_login();
+
+	if (!login)
+	{
+		login = get_login_alert();
+	}
+
+	return login;
+}
+
+function get_login_alert()
+{
+	// TODO: pr_symbol
+	var username = prompt("Username:");
+	var password = prompt("Password:");
+
+	if (!username)
+	{
+		username = "";
+	}
+	if (!password)
+	{
+		password = "";
+	}
+
+	return [username, password];
+}
+
+function get_cached_login()
+{
+	// TODO: cookies
+	return null;
 }
 
 //////////
 // MAIN //
 //////////
 
-$(function()
-{
-	startup();
-});
+// $(function()
+// {
+// 	startup();
+// });
