@@ -11,12 +11,18 @@
 		<div id="ui_login">
 			<form action="javascript:" onsubmit="submit_login(this.parentNode.id, this.form_api_token.value, this.form_proxy.value)">
   				API Token: <input type="text" name="form_api_token"><br>
-  				JSONP Proxy: <input type="text" name="form_proxy" value="http://whateverorigin.org/get?url="><br>
+  				CORS Proxy: <input type="text" name="form_proxy" value="https://jsonp.nodejitsu.com/?url="><br>
   				<input type="submit" value="Submit">
 			</form>
+
+			<div class="help">
+				<p>Unfortunately, due to same origin policy restrictions, it's currently not possible to access the Pinboard API strictly on the client side. Instead, we're forced to use a proxy, in this case JSONP. If you don't trust WhateverOrigin with your Pinboard token, you can always run the code on your own free Heroku instance.</p>
+			</div>
 		</div>
 
-		<div id="ui_dynamic"></div>
+		<div id="help">
+			<p>Since the changes this script will make to your Pinboard account will potentially have far-reaching consequences, you're strongly advised to make a backup of your existing Pinboard tags <a href="https://pinboard.in/export/">here</a>. It will only take a second and will ensure your peace of mind.</p>
+		</div>
 
 		<code id="console"></code>
 	</body>

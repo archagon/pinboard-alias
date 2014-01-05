@@ -58,6 +58,11 @@ var dirty = false;
 // HELPER FUNCTIONS //
 //////////////////////
 
+function token_regex()
+{
+	return /^([^:]+):([^:]+)$/;
+}
+
 ////////////////////
 // MAIN FUNCTIONS //
 ////////////////////

@@ -13,22 +13,28 @@ function enable_div(div_id, enable)
 	$("#" + div_id + " :input").attr("disabled", !enable);
 }
 
-function submit_login(div_id, api_token, jsonp_proxy)
+function hide_div(div_id, hide)
 {
-	dbg("UI: submitting login with " + api_token + ", " + jsonp_proxy);
+	if (hide)
+	{
+		$("#" + div_id).hide();
+	}
+	else
+	{
+		$("#" + div_id).show();	
+	}
+}
+
+function submit_login(div_id, api_token, proxy)
+{
+	dbg("UI: submitting login with " + api_token + ", " + proxy);
 	
 	enable_div(div_id, false);
 
-	// is token empty?
-	if (api_token == "")
-	{
-		ui_error("Invalid API token!");
-		enable_div(div_id, true);
-		return;
-	}
+	token_match = api_token.match(token_regex());
 
 	// is token in the correct format?
-	if (false)
+	if (!token_match)
 	{
 		ui_error("Invalid token format! Token should be in the form [username]:[token].")
 		enable_div(div_id, true);
@@ -36,32 +42,49 @@ function submit_login(div_id, api_token, jsonp_proxy)
 	}
 
 	// is the proxy URL reachable?
-	if (jsonp_proxy == "")
+	if (proxy == "")
 	{
 		dbg("UI: successfully submitted login without proxy");
-		startup("asdf", api_token, jsonp_proxy);
+		test_login(token_match[1], token_match[2], proxy);
+		hide_div(div_id, true);
 		return;
 	}
 	else
 	{
-		$.ajax(
-		{
-			type: "GET",
-			url: jsonp_proxy + encodeURIComponent('http://www.example.com') + '&callback=?',
-			dataType: 'json',
-			timeout:3000
-		})
-		.done(function(data)
-		{
+		// TODO: abstract out proxy bullshit into separate class
+		url = "https://feeds.pinboard.in/json/t:dopefish";
+		$.ajax({
+	  		url: proxy + encodeURIComponent(url),
+	  		data: 'json',
+	  		success: function(data, textStatus, XMLHttpRequest)
+	  		{
+	  		},
+	  		timeout: 10000
+	  	})
+	  	.done(function(data)
+	  	{
 			dbg("UI: successfully submitted login after proxy check");
-		})
-    	.fail(function(jqXHR, textStatus, errorThrown, textStatus)
-		{
-			err("Proxy domain can't be reached! Are you sure the proxy supports JSONP?")
-			enable_div(div_id, true);
+			test_login(token_match[1], token_match[2], proxy);
+			hide_div(div_id, true);
 			return;
+		})
+		.fail(function(jqXHR, textStatus, errorThrown, textStatus)
+		{
+		 	ui_error("Proxy domain can't be reached! Are you sure the proxy supports JSONP?")
+		 	enable_div(div_id, true);
+		 	return;
 		});
 	}
+}
+
+function test_login(username, token, proxy)
+{
+	dbg("UI: testing login")
+	pinboard = new Pinboard(username, token, proxy, true);
+	pinboard.list_posts(function(data)
+	{
+
+	}, [{ "name":"tag", "value":"programming" }]);
 }
 
 $(function()
