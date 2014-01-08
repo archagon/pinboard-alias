@@ -67,13 +67,14 @@ function token_regex()
 // MAIN FUNCTIONS //
 ////////////////////
 
-function startup(username, token, proxy)
+function PinboardLinker(pinboard)
+{
+	this.pinboard = pinboard;
+}
+
+PinboardLinker.prototype.startup = function()
 {
 	msg("Pinboard linker script version " + version + ".");
-
-	// var login = get_login();
-
-	pinboard_object = new Pinboard(username, token, proxy);
 
 	// try:
 	// 	if len(login) == 1:
