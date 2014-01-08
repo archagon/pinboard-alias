@@ -1,0 +1,22 @@
+#console
+{
+	width:80%;
+	height:300px;
+	/*line-height:50%;*/
+	padding:10px;
+	margin:10px;
+	border-style:dotted;
+	border-width:2px;
+	font-family:monospace;
+	overflow:scroll;
+}
+
+/*div#console
+{
+	line-height:35%;
+}
+
+p#console
+{
+	line-height:300%;
+}*/

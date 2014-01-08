@@ -1,0 +1,21 @@
+#tagtest
+{
+	width:100%;
+	height:100%;
+	overflow:hidden;
+}
+
+/* main tag group */
+.tag_group
+{
+	width:80%;
+	margin:20px;	
+	height:100%;
+	height:auto;
+	padding:20px;
+	position:relative;
+	/*display:inline-block;*/
+	background-color:gray;
+	/*position:relative;*/
+	overflow:hidden;
+}
