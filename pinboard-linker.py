@@ -16,11 +16,6 @@ a bidirectional alias!) In short, it's something that will substantially increas
 the organizational power of your Pinboard without the downsides of messy special cases
 like tag folders.
 
-It would be better if Pinboard implemented this natively so that you didn't have to
-run this script manually in order to sync the synonym rules. This would be a whole
-lot more efficient if done server-side. With that said, this is probably very much
-a power feature that 99% of people wouldn't want to use.
-
 This script relies on the python-pinboard project, which you can find here:
 https://github.com/mgan59/python-pinboard
 
@@ -30,13 +25,15 @@ Since pinboard tags can't contain whitespace or commas, the settings format reli
 them to split up lines and tokens.
 
 Potential future features:
-* destructive aliases: docs ~> documentation, which replaces all
-	'docs' with 'documentation' (you can do this manually through the web interface
-	in the interim)
+	* destructive aliases: docs ~> documentation, which replaces all
+	  'docs' with 'documentation' (you can do this manually through the web interface
+	  in the interim)
+	* convert to JS (or use a Python to JS converter) for UI prettyness
 """
 
 # TODO: GUI
 # TODO: token
+# TODO: add "dirty" flag to sync
 
 import pinboard
 
@@ -75,11 +72,11 @@ version_regex = re.compile(r"""
 link_regex = re.compile(r"""
 							^
 							\s*			# optional whitespace at beginning
-							([^\s,]*)	# first tag
+							([^\s,]+)	# first tag
 							\s+			# whitespace separator
 							(<?>)		# matches either '<>' or '>'; '<' does not exist by itself
 							\s+			# whitespace separator
-							([^\s,]*)	# second tag
+							([^\s,]+)	# second tag
 							\s*			# optional whitespace at end
 							$
 							""", re.VERBOSE)
@@ -245,11 +242,17 @@ def sync_settings():
 		return
 
 	msg("Syncing settings...")
+
+	# TODO: try/except
 	pinboard_object.add(url="file://" + settings_tag_name,
 						tags=(settings_tag_name),
 						description="Pinboard Linker Settings",
 						extended=encode_settings(),
 						replace=True)
+
+	global dirty
+	dirty = False
+
 	msg("Done!")
 
 def get_login():
