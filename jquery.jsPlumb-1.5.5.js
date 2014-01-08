@@ -1,1 +1,0 @@
-jsPlumb/dist/js/jquery.jsPlumb-1.5.5.js
