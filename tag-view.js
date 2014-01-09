@@ -1,5 +1,43 @@
+// jquery
 // jsplumb
 // jsPlumb.Defaults.Container = $("body");
+
+///////////////////
+// WINDOW EVENTS //
+///////////////////
+
+$(window).resize(function()
+{
+	jsPlumb.repaintEverything();
+});
+
+$(window).scroll(function()
+{
+	// TODO: make sure layout is done first
+
+	$('.tag_group').each(function(i)
+	{
+		update_sticky_label($(this).attr('id'));
+	});
+});
+
+// adapted from http://stackoverflow.com/questions/487073/check-if-element-is-visible-after-scrolling b/c lazy
+function isElementOnScreen(elem)
+{
+    var docViewTop = $(window).scrollTop();
+    var docViewBottom = docViewTop + $(window).height();
+
+    var elemTop = $(elem).offset().top;
+    var elemBottom = elemTop + $(elem).outerHeight(false);
+
+    return (((elemTop >= docViewTop) && (elemTop <= docViewBottom)) 		|| 	// top edge is visible
+    		((elemBottom >= docViewTop) && (elemBottom <= docViewBottom)) 	|| 	// bottom edge is visible
+    		((elemTop <= docViewTop) && (elemBottom >= docViewBottom)));		// object overlaps viewport
+}
+
+//////////////////////
+// LAYOUT FUNCTIONS //
+//////////////////////
 
 /**
  * Main layout method. Lays out the tags in two columns and sizes tag group div.
@@ -47,74 +85,55 @@ function layout_tag_group(tag_group_id)
 	tag_group.height(Math.max(total_height_left, total_height_right));
 }
 
-$(window).resize(function()
+function update_sticky_label(tag_group_id)
 {
-	jsPlumb.repaintEverything();
-});
+	var tag_group_object = $("#" + tag_group_id);
+	var scroll_offset = $(window).scrollTop();
+	
+	// is the tag group currently visible? if not, reset the left tag, just in case
+	if (!isElementOnScreen(tag_group_object))
+	{
+		$(tag_group_object).children('.tag_group_left').each(function(j)
+		{
+			$(tag_group_object).css({ top: $(tag_group_object).data('starting_position') + "px" });
+		});
 
-// adapted from http://stackoverflow.com/questions/487073/check-if-element-is-visible-after-scrolling b/c lazy
-function isElementOnScreen(elem)
-{
-    var docViewTop = $(window).scrollTop();
-    var docViewBottom = docViewTop + $(window).height();
+		return true;
+	}
 
-    var elemTop = $(elem).offset().top;
-    var elemBottom = elemTop + $(elem).outerHeight(false);
+	// otherwise, if we're in a browser that supports it, move the left tag while scrolling
+	$(tag_group_object).children('.tag_group_left').each(function(j)
+	{
+		var tag_object = $(this);
+		var tag_id = $(this).attr('id');
 
-    return (((elemTop >= docViewTop) && (elemTop <= docViewBottom)) 		|| 	// top edge is visible
-    		((elemBottom >= docViewTop) && (elemBottom <= docViewBottom)) 	|| 	// bottom edge is visible
-    		((elemTop <= docViewTop) && (elemBottom >= docViewBottom)));		// object overlaps viewport
+		var padding_top = parseFloat(tag_object.parent().css('padding-top'));
+		var padding_left = parseFloat(tag_object.parent().css('padding-left'));
+		var padding_right = parseFloat(tag_object.parent().css('padding-right'));
+
+		var starting_position = parseFloat($(this).data('starting_position'));
+		var height = tag_object.outerHeight(true);
+		var parent_position = tag_object.parent().offset().top;
+		var parent_padded_position = parent_position + padding_top;
+		var parent_offset = scroll_offset - parent_position;
+		var parent_padded_offset = scroll_offset - parent_padded_position;
+		var parent_height = parseFloat(tag_object.parent().css('height').substring(0, tag_object.parent().css('height').length - 2));
+
+		// console.log(parent_position, parent_padded_position);
+		var old_position = tag_object.position().top;
+		var new_position = padding_top + Math.min(parent_height - height, Math.max(parent_offset, 0));
+		tag_object.css({ top: new_position + "px" });
+
+		if (old_position != new_position)
+		{
+			jsPlumb.repaint(tag_id);
+		}
+	});
 }
 
-$(window).scroll(function()
-{
-	var scroll_offset = $(window).scrollTop();
-
-	// TODO: make sure layout is done first
-
-	$('.tag_group').each(function(i)
-	{
-		// is the tag group currently visible? if not, reset the left tag, just in case
-		if (!isElementOnScreen(this))
-		{
-			$(this).children('.tag_group_left').each(function(j)
-			{
-				$(this).css({ top: $(this).data('starting_position') + "px" });
-			});
-
-			return true;
-		}
-
-		// otherwise, if we're in a browser that supports it, move the left tag while scrolling
-		$(this).children('.tag_group_left').each(function(j)
-		{
-			var tag_object = $(this);
-			var tag_id = $(this).attr('id');
-
-			var padding_top = parseFloat(tag_object.parent().css('padding-top'));
-			var padding_left = parseFloat(tag_object.parent().css('padding-left'));
-			var padding_right = parseFloat(tag_object.parent().css('padding-right'));
-
-			var starting_position = parseFloat($(this).data('starting_position'));
-			var height = tag_object.outerHeight(true);
-			var parent_position = tag_object.parent().offset().top;
-			var parent_padded_position = parent_position + padding_top;
-			var parent_offset = scroll_offset - parent_position;
-			var parent_padded_offset = scroll_offset - parent_padded_position;
-			var parent_height = parseFloat(tag_object.parent().css('height').substring(0, tag_object.parent().css('height').length - 2));
-
-			// console.log(parent_position, parent_padded_position);
-			var old_position = tag_object.position().top;
-			var new_position = padding_top + Math.min(parent_height - height, Math.max(parent_offset, 0));
-			tag_object.css({ top: new_position + "px" });
-
-			if (old_position != new_position)
-			{
-				jsPlumb.repaint(tag_id);
-			}
-		});
-	});
-});
+//////////////////////////
+// ADD/DELETE FUNCTIONS //
+//////////////////////////
 
 $(function()
 {
