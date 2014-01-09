@@ -40,6 +40,7 @@ function layout_tag_group(tag_group_id)
 			right: (!is_left ? padding_right : 'auto')
 		});
 
+		// can't use conditional as lvalue... lame!
 		if (is_left)
 		{
 			total_height_left += ((j == 0 ? 0 : gap) + height);
@@ -58,8 +59,8 @@ $(window).resize(function()
 	jsPlumb.repaintEverything();
 });
 
-// borrowed from http://stackoverflow.com/questions/487073/check-if-element-is-visible-after-scrolling b/c lazy
-function isScrolledIntoView(elem)
+// adapted from http://stackoverflow.com/questions/487073/check-if-element-is-visible-after-scrolling b/c lazy
+function isElementOnScreen(elem)
 {
     var docViewTop = $(window).scrollTop();
     var docViewBottom = docViewTop + $(window).height();
@@ -76,10 +77,12 @@ $(window).scroll(function()
 {
 	var scroll_offset = $(window).scrollTop();
 
+	// TODO: make sure layout is done first
+
 	$('.tag_group').each(function(i)
 	{
-		// is the tag group currently visible? if not, reset the moving tags
-		if (!isScrolledIntoView(this))
+		// is the tag group currently visible? if not, reset the left tag, just in case
+		if (!isElementOnScreen(this))
 		{
 			$(this).children('.tag_group_left').each(function(j)
 			{
@@ -89,39 +92,33 @@ $(window).scroll(function()
 			return true;
 		}
 
+		// MIN(div height - padding, MAX(scroll position, div position + padding));
+
+		// otherwise, if we're in a browser that supports it, move the left tag while scrolling
 		$(this).children('.tag_group_left').each(function(j)
 		{
 			var tag_object = $(this);
 			var tag_id = $(this).attr('id');
-			var original_top = $(this).data('starting_position');
 
-			var margin = parseFloat(original_top.substring(0, original_top.length - 2));
+			var padding_top = parseFloat(tag_object.parent().css('padding-top'));
+			var padding_left = parseFloat(tag_object.parent().css('padding-left'));
+			var padding_right = parseFloat(tag_object.parent().css('padding-right'));
+
+			var starting_position = parseFloat($(this).data('starting_position'));
+			var height = tag_object.outerHeight(true);
 			var parent_position = tag_object.parent().offset().top;
-			var parent_offset = parent_position - scroll_offset;
+			var parent_padded_position = parent_position + padding_top;
+			var parent_offset = scroll_offset - parent_position;
+			var parent_padded_offset = scroll_offset - parent_padded_position;
+			var parent_height = parseFloat(tag_object.parent().css('height').substring(0, tag_object.parent().css('height').length - 2));
 
-			if (parent_offset < 0)
+			// console.log(parent_position, parent_padded_position);
+			var old_position = tag_object.position().top;
+			var new_position = padding_top + Math.min(parent_height - height, Math.max(parent_offset, 0));
+			tag_object.css({ top: new_position + "px" });
+
+			if (old_position != new_position)
 			{
-				var height = tag_object.outerHeight(true);
-				var parent_height = parseFloat(tag_object.parent().css('height').substring(0, tag_object.parent().css('height').length - 2));
-
-				var border = parent_height - margin - height;
-
-				if (tag_object.position().top > border)
-				{
-					// border += 1;
-					tag_object.css({ top: border + "px" });
-					jsPlumb.repaint(tag_id);
-				}
-				else
-				{
-					var new_top = (Math.abs(parent_offset) + margin);
-					tag_object.css({ top: new_top + "px" });
-					jsPlumb.repaint(tag_id);
-				}
-			}
-			else
-			{
-				tag_object.css({ top: margin + "px" });
 				jsPlumb.repaint(tag_id);
 			}
 		});
