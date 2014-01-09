@@ -39,6 +39,7 @@ $(window).resize(function()
 $(window).scroll(function()
 {
 	// TODO: make sure layout is done first
+	// TODO: update scroll position in layout
 
 	$('.tag_group').each(function(i)
 	{
@@ -149,10 +150,6 @@ function update_sticky_label(tag_group_id)
 // ADD/DELETE FUNCTIONS //
 //////////////////////////
 
-// 	<div class="demo" id="tagtest">
-// 		<div class="tag_group" id="programming_to">
-// 			<div class="component window tag tag_group_left" id="tag_programming1">Programming</div>
-
 // TODO: multiple overlapping deletes
 
 function add_connection(tag1, tag2, connection_type, animated)
@@ -183,6 +180,8 @@ function add_connection(tag1, tag2, connection_type, animated)
 		return;
 	}
 
+	// TODO: tag creation into separate function?
+
 	// does the left tag already exist? if not, create one
 	if (!$(tag_group_selector).children(".tag" + ".tag_group_left" + "#" + tag1_id).exists())
 	{
@@ -193,6 +192,25 @@ function add_connection(tag1, tag2, connection_type, animated)
 	if (!$(tag_group_selector).children(".tag" + ".tag_group_right" + "#" + tag2_id).exists())
 	{
 		$(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
+		$("#" + tag2_id).click(function()
+		{
+			var fade_time = 200;
+
+			var connection = jsPlumb.getConnections(
+			{
+				source:tag1_id,
+				target:tag2_id
+			})[0];
+
+			$(connection.connector.canvas).fadeOut(fade_time);
+			$(connection.endpoints[0].canvas).fadeOut(fade_time);
+			$(connection.endpoints[1].canvas).fadeOut(fade_time);
+
+			$(this).fadeOut(fade_time, function()
+			{
+				delete_connection(tag1, tag2, connection_type);
+			});
+		});
 	}
 
 	layout_tag_group(tag_group_id);
@@ -339,20 +357,6 @@ $(function()
 	            DragOptions : { cursor: "pointer", zIndex:2000 },
 	            HoverClass:"connector-hover"
 	        });
-
-	        jsPlumb.bind("endpointClick", function(endpoint, originalEvent)
-        	{
-        		var tag1 = $("#" + endpoint.elementId).text();
-        		var is_right = $("#" + endpoint.elementId).hasClass('tag_group_right');
-				var connections = _connections_for_tag(endpoint.elementId);
-
-        		for (i in connections)
-        		{
-        			var tag2_id = connections[i];
-        			var tag2 = $("#" + tag2_id).text();
-        			delete_connection((is_right ? tag2 : tag1), (is_right ? tag1 : tag2), "to");
-        		}
-        	});
 
 	        create_sample_data();
 		}
