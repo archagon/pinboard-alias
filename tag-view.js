@@ -2,6 +2,31 @@
 // jsplumb
 // jsPlumb.Defaults.Container = $("body");
 
+// TODO: public/private methods
+
+//////////////////////
+// HELPER FUNCTIONS //
+//////////////////////
+
+jQuery.fn.exists = function()
+{
+	return this.length > 0;
+}
+
+// adapted from http://stackoverflow.com/questions/487073/check-if-element-is-visible-after-scrolling b/c lazy
+jQuery.fn.isOnScreen = function()
+{
+    var docViewTop = $(window).scrollTop();
+    var docViewBottom = docViewTop + $(window).height();
+
+    var elemTop = $(this).offset().top;
+    var elemBottom = elemTop + $(this).outerHeight(false);
+
+    return (((elemTop >= docViewTop) && (elemTop <= docViewBottom)) 		|| 	// top edge is visible
+    		((elemBottom >= docViewTop) && (elemBottom <= docViewBottom)) 	|| 	// bottom edge is visible
+    		((elemTop <= docViewTop) && (elemBottom >= docViewBottom)));		// object overlaps viewport	
+}
+
 ///////////////////
 // WINDOW EVENTS //
 ///////////////////
@@ -21,23 +46,11 @@ $(window).scroll(function()
 	});
 });
 
-// adapted from http://stackoverflow.com/questions/487073/check-if-element-is-visible-after-scrolling b/c lazy
-function isElementOnScreen(elem)
-{
-    var docViewTop = $(window).scrollTop();
-    var docViewBottom = docViewTop + $(window).height();
-
-    var elemTop = $(elem).offset().top;
-    var elemBottom = elemTop + $(elem).outerHeight(false);
-
-    return (((elemTop >= docViewTop) && (elemTop <= docViewBottom)) 		|| 	// top edge is visible
-    		((elemBottom >= docViewTop) && (elemBottom <= docViewBottom)) 	|| 	// bottom edge is visible
-    		((elemTop <= docViewTop) && (elemBottom >= docViewBottom)));		// object overlaps viewport
-}
-
 //////////////////////
 // LAYOUT FUNCTIONS //
 //////////////////////
+
+// TODO: pass in objects instead of id strings
 
 /**
  * Main layout method. Lays out the tags in two columns and sizes tag group div.
@@ -91,10 +104,11 @@ function update_sticky_label(tag_group_id)
 	var scroll_offset = $(window).scrollTop();
 	
 	// is the tag group currently visible? if not, reset the left tag, just in case
-	if (!isElementOnScreen(tag_group_object))
+	if (!tag_group_object.isOnScreen())
 	{
 		$(tag_group_object).children('.tag_group_left').each(function(j)
 		{
+			// TODO: no longer relevant
 			$(tag_group_object).css({ top: $(tag_group_object).data('starting_position') + "px" });
 		});
 
@@ -135,72 +149,210 @@ function update_sticky_label(tag_group_id)
 // ADD/DELETE FUNCTIONS //
 //////////////////////////
 
+// 	<div class="demo" id="tagtest">
+// 		<div class="tag_group" id="programming_to">
+// 			<div class="component window tag tag_group_left" id="tag_programming1">Programming</div>
+
+// TODO: multiple overlapping deletes
+
+function add_connection(tag1, tag2, connection_type, animated)
+{
+	// TODO: classes and formats as global vars
+	// TODO: sanitize tag names
+	// TODO: to/from classes in tags and groups
+
+	var tag_group_id = _tag_group_id(tag1, connection_type);
+	var tag1_id = _tag_id(tag1, connection_type);
+	var tag2_id = _tag_id(tag2, connection_type);
+
+	var tag_group_selector = ".tag_group" + "#" + tag_group_id;
+
+	console.log(tag_group_id, tag_group_selector, "exists?", $(tag_group_selector).exists());
+
+	// does the appropriate tag group exist? if not, create one
+	if (!$(tag_group_selector).exists())
+	{
+		// TODO: access tagtest thru function?
+		$("#tagtest").append("<div class='tag_group' id='" + tag_group_id + "'></div>");
+	}
+
+	// does the tag connection already exist? if so, return
+	if ($(tag_group_selector).children("#" + tag1_id).exists() && $(tag_group_selector).children("#" + tag2_id).exists())
+	{
+		// TODO: verify
+		return;
+	}
+
+	// does the left tag already exist? if not, create one
+	if (!$(tag_group_selector).children(".tag" + ".tag_group_left" + "#" + tag1_id).exists())
+	{
+		$(tag_group_selector).append("<div class='component window tag tag_group_left' id='" + tag1_id + "'>" + tag1 + "</div>");
+	}
+
+	// ditto right tag
+	if (!$(tag_group_selector).children(".tag" + ".tag_group_right" + "#" + tag2_id).exists())
+	{
+		$(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
+	}
+
+	layout_tag_group(tag_group_id);
+	_connect_tags(tag1_id, tag2_id);
+}
+
+// the connection type isn't really necessary here, but I want my interface to be explicit
+function delete_connection(tag1, tag2, connection_type, animated)
+{
+	console.log("deleting", tag1, tag2);
+
+	var tag_group_id = _tag_group_id(tag1, connection_type);
+	var tag1_id = _tag_id(tag1, connection_type);
+	var tag2_id = _tag_id(tag2, connection_type);
+
+	var tag_group_selector = ".tag_group" + "#" + tag_group_id;
+	console.log(tag_group_selector);
+
+	// does the appropriate tag group exist? if not, return
+	if (!$(tag_group_selector).exists())
+	{
+		console.log("tag group does not exist");
+		return;
+	}
+
+	// do the tags exist? if not, return
+	if (!$(tag_group_selector).children("#" + tag1_id).exists() || !$(tag_group_selector).children("#" + tag2_id).exists())
+	{
+		console.log("tag does not exist");
+		return;
+	}
+
+	var num_connections = _connections_for_tag(tag1_id).length;
+
+	// TODO: use the actual connection object
+	jsPlumb.detachAllConnections(tag2_id);
+	$("#" + tag2_id).remove();
+
+	if (num_connections == 1)
+	{
+		jsPlumb.detachAllConnections(tag1_id); // just in case
+		$("#" + tag1_id).remove();
+		$("#" + tag_group_id).remove();
+	}
+	else
+	{
+		layout_tag_group(tag_group_id);
+		jsPlumb.repaint(tag1_id);
+	}
+}
+
+function _connections_for_tag(tag_id)
+{
+	// TODO: this needs to go away
+	var id_elements = tag_id.split('_');
+	var connection_type = id_elements[id_elements.length - 1];
+
+	var is_left;
+
+	if ($("#" + tag_id).hasClass("tag_group_left"))
+	{
+		is_left = true;
+	}
+	else
+	{
+		is_left = false;
+	}
+	// TODO: assert on no class
+
+	return_array = [];
+
+	var siblings = $("#" + tag_id).siblings((is_left ? ".tag_group_right" : ".tag_group_left"));
+	siblings.each(function(i)
+	{
+		return_array.push($(this).attr('id'));
+	});
+
+	return return_array;
+}
+
+function _connect_tags(tag1_id, tag2_id)
+{
+	// TODO: is static possible?
+	var connectorStrokeColor = "rgba(50, 50, 200, 1)",
+        connectorHighlightStrokeColor = "rgba(180, 180, 200, 1)",
+        hoverPaintStyle = { strokeStyle:"#7ec3d9" };
+
+    var connection = jsPlumb.connect(
+    {
+        source:tag1_id, target:tag2_id,
+        paintStyle:
+        { 
+           lineWidth:10,
+           strokeStyle:connectorStrokeColor,
+           outlineColor:"#abc",
+           outlineWidth:1
+        },
+        hoverPaintStyle:hoverPaintStyle, 
+        anchor:"AutoDefault",
+        detachable:false,
+        endpointStyle:
+        { 
+           radius:10
+        },                                                               
+   	});
+
+   	return connection;
+}
+
+function _tag_group_id(tag, connection_type)
+{
+	return tag + "_" + connection_type;
+}
+
+function _tag_id(tag, connection_type)
+{
+	return "tag_" + tag + "_" + connection_type;
+}
+
+///////////
+// OTHER //
+///////////
+
+function create_sample_data()
+{
+	add_connection("programming", "networking", "to");
+	add_connection("programming", "physics", "to");
+	add_connection("programming", "game-programming", "to");
+	add_connection("programming", "c", "to");
+	add_connection("programming", "python", "to");
+	add_connection("programming", "coding", "tofrom");
+}
+
 $(function()
 {
 	window.tagDemo =
 	{
 		init:function()
         {
-			$('.tag_group').each(function(i)
-	        {
-	        	layout_tag_group($(this).attr('id'));
-
-	        	$(this).children('.tag_group_left').each(function(j)
-	        	{
-	        		$(this).data('starting_position', $(this).css('top'));
-				});
-	        });
-
 	        jsPlumb.importDefaults(
 	        {
 	            DragOptions : { cursor: "pointer", zIndex:2000 },
 	            HoverClass:"connector-hover"
 	        });
 
-	        var connectorStrokeColor = "rgba(50, 50, 200, 1)",
-	            connectorHighlightStrokeColor = "rgba(180, 180, 200, 1)",
-	            hoverPaintStyle = { strokeStyle:"#7ec3d9" };
+	        jsPlumb.bind("endpointClick", function(endpoint, originalEvent)
+        	{
+        		var tag1 = $("#" + endpoint.elementId).text();
+        		var is_right = $("#" + endpoint.elementId).hasClass('tag_group_right');
+				var connections = _connections_for_tag(endpoint.elementId);
 
-	        $('.tag_group').each(function(i)
-	        {
-	        	var left_tags = {};
-	        	var right_tags = {};
+        		for (i in connections)
+        		{
+        			var tag2_id = connections[i];
+        			var tag2 = $("#" + tag2_id).text();
+        			delete_connection((is_right ? tag2 : tag1), (is_right ? tag1 : tag2), "to");
+        		}
+        	});
 
-	        	$(this).children('.tag_group_left').each(function(j)
-	        	{
-	        		left_tags[$(this).attr('id')] = true;
-				});
-
-				$(this).children('.tag_group_right').each(function(j)
-	        	{
-	    			right_tags[$(this).attr('id')] = true;
-				});
-
-				$.each(left_tags, function(lkey, lvalue)
-				{
-  					$.each(right_tags, function(rkey, rvalue)
-  					{
-				        var connection = jsPlumb.connect(
-				        {
-				            source:lkey, target:rkey,
-				            paintStyle:
-				            { 
-				               lineWidth:10,
-				               strokeStyle:connectorStrokeColor,
-				               outlineColor:"#abc",
-				               outlineWidth:1
-				            },
-				            hoverPaintStyle:hoverPaintStyle, 
-				            anchor:"AutoDefault",
-				            detachable:false,
-				            endpointStyle:
-				            { 
-			                   radius:10
-				            },                                                                
-				       	});
-  					});
-				});
-			});
+	        create_sample_data();
 		}
 	};
 
