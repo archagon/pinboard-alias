@@ -283,20 +283,22 @@ function _connect_tags(tag1_id, tag2_id)
     var connection = jsPlumb.connect(
     {
         source:tag1_id, target:tag2_id,
+        connector:["Bezier", { curviness:70 }],
         paintStyle:
         { 
-           lineWidth:10,
+           lineWidth:5,
            strokeStyle:connectorStrokeColor,
            outlineColor:"#abc",
            outlineWidth:1
         },
-        hoverPaintStyle:hoverPaintStyle, 
-        anchor:"AutoDefault",
+        anchors:[[ "Right" ], [ "Left" ]],
         detachable:false,
+        // endpoint:"Rectangle",
         endpointStyle:
         { 
-           radius:10
-        },                                                               
+           radius:10,
+           // cssClass:"l1arrow",
+        },                    
    	});
 
    	return connection;
