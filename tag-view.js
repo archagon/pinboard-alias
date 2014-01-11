@@ -320,7 +320,7 @@ function _connect_tags(tag1_id, tag2_id)
         },
         anchors:[[ "Right" ], [ "Left" ]],
         detachable:false,
-        // endpoint:"Rectangle",
+        endpoint:"Blank",
         endpointStyle:
         { 
            radius:10,
