@@ -65,8 +65,10 @@ $(document).click(function(event)
 /**
  * Main layout method. Lays out the tags in two columns and sizes tag group div.
  */
-function layout_tag_group(tag_group_id)
+function layout_tag_group(tag_group_id, animated)
 {
+	animated = typeof animated !== 'undefined' ? animated : false;
+
 	var tag_group = $("#" + tag_group_id);
 	var gap = 5;
 
@@ -87,12 +89,13 @@ function layout_tag_group(tag_group_id)
 		var height = $(this).outerHeight(true);
 		var is_left = $(this).hasClass('tag_group_left')
 
-		$(this).css(
+		var pos_css = 
 		{
 			top: padding_top + ((is_left ? total_height_left : total_height_right) + (j == 0 ? 0 : gap)),
 			left: (is_left ? padding_left : 'auto'),
 			right: (!is_left ? padding_right : 'auto')
-		});
+		};
+		animated ? jsPlumb.animate(this, pos_css) : $(this).css(pos_css);
 
 		// can't use conditional as lvalue... lame!
 		if (is_left)
@@ -105,11 +108,19 @@ function layout_tag_group(tag_group_id)
 		}
 	});
 
-	tag_group.height(Math.max(total_height_left, total_height_right));
+	var height_css =
+	{
+		height:Math.max(total_height_left, total_height_right)
+	};
+	animated ? tag_group.animate(height_css) : tag_group.css(height_css);
+
+	update_sticky_label(tag_group_id, animated);
 }
 
 function update_sticky_label(tag_group_id)
 {
+	animated = typeof animated !== 'undefined' ? animated : false;
+
 	var tag_group_object = $("#" + tag_group_id);
 	var scroll_offset = $(window).scrollTop();
 	
@@ -146,6 +157,8 @@ function update_sticky_label(tag_group_id)
 		// console.log(parent_position, parent_padded_position);
 		var old_position = tag_object.position().top;
 		var new_position = padding_top + Math.min(parent_height - height, Math.max(parent_offset, 0));
+
+		// ANIM
 		tag_object.css({ top: new_position + "px" });
 
 		if (old_position != new_position)
@@ -203,33 +216,26 @@ function add_connection(tag1, tag2, connection_type, animated)
 		$(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
 		$("#" + tag2_id).click(function()
 		{
-			var fade_time = 200;
-
-			var connection = jsPlumb.getConnections(
-			{
-				source:tag1_id,
-				target:tag2_id
-			})[0];
-
-			$(connection.connector.canvas).fadeOut(fade_time);
-			$(connection.endpoints[0].canvas).fadeOut(fade_time);
-			$(connection.endpoints[1].canvas).fadeOut(fade_time);
-
-			$(this).fadeOut(fade_time, function()
-			{
-				delete_connection(tag1, tag2, connection_type);
-			});
+			// set_delete_mode(tag2, connection_type, animated);
+			delete_connection(tag1, tag2, connection_type, true);
 		});
 	}
 
-	layout_tag_group(tag_group_id);
+	layout_tag_group(tag_group_id, animated);
 	_connect_tags(tag1_id, tag2_id);
+}
+
+function set_delete_mode(tag, connection_type, animated)
+{
+	// TODO:
 }
 
 // the connection type isn't really necessary here, but I want my interface to be explicit
 function delete_connection(tag1, tag2, connection_type, animated)
 {
 	console.log("deleting", tag1, tag2);
+
+	var fade_time = 200;
 
 	var tag_group_id = _tag_group_id(tag1, connection_type);
 	var tag1_id = _tag_id(tag1, connection_type);
@@ -254,20 +260,48 @@ function delete_connection(tag1, tag2, connection_type, animated)
 
 	var num_connections = _connections_for_tag(tag1_id).length;
 
-	// TODO: use the actual connection object
-	jsPlumb.detachAllConnections(tag2_id);
-	$("#" + tag2_id).remove();
-
-	if (num_connections == 1)
+	var remove_connection = function()
 	{
-		jsPlumb.detachAllConnections(tag1_id); // just in case
-		$("#" + tag1_id).remove();
-		$("#" + tag_group_id).remove();
+		// TODO: use the actual connection object
+		jsPlumb.detachAllConnections(tag2_id);
+		$("#" + tag2_id).remove();
+
+		if (num_connections == 1)
+		{
+			jsPlumb.detachAllConnections(tag1_id); // just in case
+			$("#" + tag1_id).remove();
+			// $("#" + tag_group_id).remove();
+		}
+		// else
+		// {
+		// 	layout_tag_group(tag_group_id, animated);
+		// 	jsPlumb.repaint(tag1_id);
+		// }
+	};
+
+	if (animated)
+	{
+		var connection = jsPlumb.getConnections(
+		{
+			source:tag1_id,
+			target:tag2_id
+		})[0];
+
+		$(connection.connector.canvas).fadeOut(fade_time);
+		$(connection.endpoints[0].canvas).fadeOut(fade_time);
+		$(connection.endpoints[1].canvas).fadeOut(fade_time);
+		$("#" + tag2_id).fadeOut(fade_time, function()
+		{
+			remove_connection();
+		});
+
+		$("#" + tag2_id).removeClass('tag');
+		layout_tag_group(tag_group_id, true);
 	}
 	else
 	{
-		layout_tag_group(tag_group_id);
-		jsPlumb.repaint(tag1_id);
+		remove_connection();
+		layout_tag_group(tag_group_id, animated);
 	}
 }
 
