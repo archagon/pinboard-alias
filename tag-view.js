@@ -47,6 +47,15 @@ $(window).scroll(function()
 	});
 });
 
+$(document).click(function(event)
+{ 
+    // if($(event.target).parents().index($('#menucontainer')) == -1) {
+    //     if($('#menucontainer').is(":visible")) {
+    //         $('#menucontainer').hide()
+    //     }
+    // }
+});
+
 //////////////////////
 // LAYOUT FUNCTIONS //
 //////////////////////
