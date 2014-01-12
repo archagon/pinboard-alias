@@ -3,16 +3,20 @@
 // jsPlumb.Defaults.Container = $("body");
 
 // TODO: public/private methods
+// TODO: tags can't alias to themselves
 
 ///////////////////
 // CONFIGURATION //
 ///////////////////
 
-var animation_properties =
+var ui_properties =
 {
-    delete_fade_time:200,
-    layout_move_time:150,
-    tag_gap:5,
+    delete_fade_time: 200,
+    layout_move_time: 150,
+    tag_gap: 5,
+    delete_expansion: 75,
+    delete_expansion_time: 100,
+    animation: false,
 };
 
 //////////////////////
@@ -113,7 +117,7 @@ function layout_tag_group(tag_group_id, animated)
         {
             $(this).animate(pos_css,
             {
-                duration:animation_properties.layout_move_time,
+                duration:ui_properties.layout_move_time,
                 queue:false,
                 progress:function()
                 {
@@ -162,7 +166,7 @@ function layout_tag_group(tag_group_id, animated)
     animated ? tag_group.animate(height_css,
     {
         queue:false,
-        duration:animation_properties.layout_move_time,
+        duration:ui_properties.layout_move_time,
         progress:function()
         {
             // console.log(tag_group.css('height'));
@@ -318,7 +322,7 @@ function add_connection(tag1, tag2, connection_type, animated)
         else
         {
             // debugger;
-            pos_css['top'] = parseFloat(last_right_tag_object.css('top')) + last_right_tag_object.outerHeight(true) + animation_properties.tag_gap;
+            pos_css['top'] = parseFloat(last_right_tag_object.css('top')) + last_right_tag_object.outerHeight(true) + ui_properties.tag_gap;
         }
 
         $(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
@@ -326,17 +330,19 @@ function add_connection(tag1, tag2, connection_type, animated)
 
         $("#" + tag2_id).click(function()
         {
-            // set_delete_mode(tag2, connection_type, animated);
+            // console.log($("#" + tag2_id).attr('delete_mode'));
+            var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
+            set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
             // delete_connection(tag1, tag2, connection_type, true);
 
-            if (jQuery.inArray(_tag_id("asdf", connection_type), _connections_for_tag(tag1_id)) != -1)
-            {
-                delete_connection(tag1, "asdf", connection_type, true);
-            }
-            else
-            {
-                add_connection(tag1, "asdf", connection_type, true);
-            }
+            // if (jQuery.inArray(_tag_id("asdf", connection_type), _connections_for_tag(tag1_id)) != -1)
+            // {
+            //     delete_connection(tag1, "asdf", connection_type, ui_properties.animation);
+            // }
+            // else
+            // {
+            //     add_connection(tag1, "asdf", connection_type, ui_properties.animation);
+            // }
         });
     }
 
@@ -356,24 +362,53 @@ function add_connection(tag1, tag2, connection_type, animated)
         $(connection.endpoints[1].canvas).hide();
         $("#" + tag2_id).hide();
 
-        $(connection.connector.canvas).fadeIn(animation_properties.delete_fade_time);
-        // $(connection.endpoints[0].canvas).fadeIn(animation_properties.delete_fade_time);
-        $(connection.endpoints[1].canvas).fadeIn(animation_properties.delete_fade_time);
-        $("#" + tag2_id).fadeIn(animation_properties.delete_fade_time, function()
+        $(connection.connector.canvas).fadeIn(ui_properties.delete_fade_time);
+        // $(connection.endpoints[0].canvas).fadeIn(ui_properties.delete_fade_time);
+        $(connection.endpoints[1].canvas).fadeIn(ui_properties.delete_fade_time);
+        $("#" + tag2_id).fadeIn(ui_properties.delete_fade_time, function()
         {
             connection.should_repaint = true;
             layout_tag_group(tag_group_id, false); // to make sure it ends in the correct position
         });
 
-        $("#" + tag2_id).fadeIn(animation_properties.delete_fade_time);
+        $("#" + tag2_id).fadeIn(ui_properties.delete_fade_time);
     }
 
     layout_tag_group(tag_group_id, animated);
 }
 
-function set_delete_mode(tag, connection_type, animated)
+function set_delete_mode(tag, connection_type, enabled, animated)
 {
-    // TODO:
+    var tag_id = _tag_id(tag, connection_type);
+    var tag_selector = "#" + tag_id;
+    console.log("setting delete mode to", enabled);
+
+    var new_size = {};
+
+    if (enabled)
+    {
+        new_size['padding-left'] = parseFloat($(tag_selector).css('padding-right')) + ui_properties.delete_expansion;
+    }
+    else
+    {
+        new_size['padding-left'] = parseFloat($(tag_selector).css('padding-right'));
+    }
+
+    if (animated)
+    {
+        jsPlumb.animate(tag_id, new_size,
+        {
+            duration:ui_properties.delete_expansion_time,
+        });
+        // $(tag_selector).animate(new_size);
+    }
+    else
+    {
+        $(tag_selector).css(new_size);
+        jsPlumb.repaint(tag_id);
+    }
+
+    $(tag_selector).attr('delete_mode', enabled);
 }
 
 // the connection type isn't really necessary here, but I want my interface to be explicit
@@ -433,10 +468,10 @@ function delete_connection(tag1, tag2, connection_type, animated)
 
         connection.should_repaint = false;
 
-        $(connection.connector.canvas).fadeOut(animation_properties.delete_fade_time);
-        $(connection.endpoints[0].canvas).fadeOut(animation_properties.delete_fade_time);
-        $(connection.endpoints[1].canvas).fadeOut(animation_properties.delete_fade_time);
-        $("#" + tag2_id).fadeOut(animation_properties.delete_fade_time, function()
+        $(connection.connector.canvas).fadeOut(ui_properties.delete_fade_time);
+        $(connection.endpoints[0].canvas).fadeOut(ui_properties.delete_fade_time);
+        $(connection.endpoints[1].canvas).fadeOut(ui_properties.delete_fade_time);
+        $("#" + tag2_id).fadeOut(ui_properties.delete_fade_time, function()
         {
             connection.should_repaint = true;
             remove_connection();
