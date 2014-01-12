@@ -24,7 +24,7 @@ jQuery.fn.isOnScreen = function()
 
     return (((elemTop >= docViewTop) && (elemTop <= docViewBottom))         ||	// top edge is visible
             ((elemBottom >= docViewTop) && (elemBottom <= docViewBottom))	||	// bottom edge is visible
-	        ((elemTop <= docViewTop) && (elemBottom >= docViewBottom)));		// object overlaps viewport    
+	        ((elemTop <= docViewTop) && (elemBottom >= docViewBottom)));		// object overlaps viewport
 }
 
 ///////////////////
