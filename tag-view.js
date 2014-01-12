@@ -4,6 +4,16 @@
 
 // TODO: public/private methods
 
+///////////////////
+// CONFIGURATION //
+///////////////////
+
+var animation_properties =
+{
+    delete_fade_time:200,
+    layout_move_time:150
+};
+
 //////////////////////
 // HELPER FUNCTIONS //
 //////////////////////
@@ -95,7 +105,21 @@ function layout_tag_group(tag_group_id, animated)
             left: (is_left ? padding_left : 'auto'),
             right: (!is_left ? padding_right : 'auto')
         };
-        animated ? jsPlumb.animate(this, pos_css) : $(this).css(pos_css);
+        animated ? $(this).animate(pos_css,
+        {
+            duration:animation_properties.layout_move_time,
+            progress:function()
+            {
+                update_sticky_label(tag_group_id); // TODO: quick hack
+                if (!is_left)
+                {
+                    // we don't use jsPlumb.animate because we don't want to animate a connection that's getting deleted,
+                    // and jsPlumb.animate animates every connection from the left tag too
+                    // TODO: verify
+                    jsPlumb.repaint($(this).attr('id'));
+                }
+            }
+        }) : $(this).css(pos_css);
 
         // can't use conditional as lvalue... lame!
         if (is_left)
@@ -112,7 +136,10 @@ function layout_tag_group(tag_group_id, animated)
     {
         height:Math.max(total_height_left, total_height_right)
     };
-    animated ? tag_group.animate(height_css) : tag_group.css(height_css);
+    animated ? tag_group.animate(height_css,
+    {
+        duration:animation_properties.layout_move_time            
+    }) : tag_group.css(height_css);
 
     update_sticky_label(tag_group_id, animated);
 }
@@ -235,8 +262,6 @@ function delete_connection(tag1, tag2, connection_type, animated)
 {
     console.log("deleting", tag1, tag2);
 
-    var fade_time = 200;
-
     var tag_group_id = _tag_group_id(tag1, connection_type);
     var tag1_id = _tag_id(tag1, connection_type);
     var tag2_id = _tag_id(tag2, connection_type);
@@ -287,10 +312,10 @@ function delete_connection(tag1, tag2, connection_type, animated)
             target:tag2_id
         })[0];
 
-        $(connection.connector.canvas).fadeOut(fade_time);
-        $(connection.endpoints[0].canvas).fadeOut(fade_time);
-        $(connection.endpoints[1].canvas).fadeOut(fade_time);
-        $("#" + tag2_id).fadeOut(fade_time, function()
+        $(connection.connector.canvas).fadeOut(animation_properties.delete_fade_time);
+        $(connection.endpoints[0].canvas).fadeOut(animation_properties.delete_fade_time);
+        $(connection.endpoints[1].canvas).fadeOut(animation_properties.delete_fade_time);
+        $("#" + tag2_id).fadeOut(animation_properties.delete_fade_time, function()
         {
             remove_connection();
         });
