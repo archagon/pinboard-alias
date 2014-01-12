@@ -19,6 +19,8 @@ var ui_properties =
     animation: false,
 };
 
+var supportsTouch = 'createTouch' in document;
+
 //////////////////////
 // HELPER FUNCTIONS //
 //////////////////////
@@ -328,22 +330,36 @@ function add_connection(tag1, tag2, connection_type, animated)
         $(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
         $("#" + tag2_id).css(pos_css);
 
-        $("#" + tag2_id).click(function()
+        if (supportsTouch)
         {
-            // console.log($("#" + tag2_id).attr('delete_mode'));
-            var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
-            set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
-            // delete_connection(tag1, tag2, connection_type, true);
+            $("#" + tag2_id).on(
+            {
+                'touchstart': function()
+                {
+                    var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
+                    set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
+                }
+            });
+        }
+        else
+        {
+            $("#" + tag2_id).click(function()
+            {
+                // var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
+                // set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
 
-            // if (jQuery.inArray(_tag_id("asdf", connection_type), _connections_for_tag(tag1_id)) != -1)
-            // {
-            //     delete_connection(tag1, "asdf", connection_type, ui_properties.animation);
-            // }
-            // else
-            // {
-            //     add_connection(tag1, "asdf", connection_type, ui_properties.animation);
-            // }
-        });
+                // delete_connection(tag1, tag2, connection_type, true);
+
+                // if (jQuery.inArray(_tag_id("asdf", connection_type), _connections_for_tag(tag1_id)) != -1)
+                // {
+                //     delete_connection(tag1, "asdf", connection_type, ui_properties.animation);
+                // }
+                // else
+                // {
+                //     add_connection(tag1, "asdf", connection_type, ui_properties.animation);
+                // }
+            });
+        }
     }
 
     _connect_tags(tag1_id, tag2_id);
@@ -379,9 +395,10 @@ function add_connection(tag1, tag2, connection_type, animated)
 
 function set_delete_mode(tag, connection_type, enabled, animated)
 {
+    // TODO: cancel existing animations
+
     var tag_id = _tag_id(tag, connection_type);
     var tag_selector = "#" + tag_id;
-    console.log("setting delete mode to", enabled);
 
     var new_size = {};
 
