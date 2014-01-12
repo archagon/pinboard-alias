@@ -11,7 +11,8 @@
 var animation_properties =
 {
     delete_fade_time:200,
-    layout_move_time:150
+    layout_move_time:150,
+    tag_gap:5,
 };
 
 //////////////////////
@@ -99,27 +100,41 @@ function layout_tag_group(tag_group_id, animated)
         var height = $(this).outerHeight(true);
         var is_left = $(this).hasClass('tag_group_left')
 
+        var connection = jsPlumb.getConnections(is_left ? { source:$(this).attr('id') } : { target:$(this).attr('id') })[0];
+
         var pos_css = 
         {
             top: padding_top + ((is_left ? total_height_left : total_height_right) + (j == 0 ? 0 : gap)),
             left: (is_left ? padding_left : 'auto'),
             right: (!is_left ? padding_right : 'auto')
         };
-        animated ? $(this).animate(pos_css,
+
+        if (animated)
         {
-            duration:animation_properties.layout_move_time,
-            progress:function()
+            $(this).animate(pos_css,
             {
-                update_sticky_label(tag_group_id); // TODO: quick hack
-                if (!is_left)
+                duration:animation_properties.layout_move_time,
+                queue:false,
+                progress:function()
                 {
-                    // we don't use jsPlumb.animate because we don't want to animate a connection that's getting deleted,
-                    // and jsPlumb.animate animates every connection from the left tag too
-                    // TODO: verify
-                    jsPlumb.repaint($(this).attr('id'));
+                    if (!is_left && connection.should_repaint)
+                    {
+                        // we don't use jsPlumb.animate because we don't want to animate a connection that's getting deleted,
+                        // and jsPlumb.animate animates every connection from the left tag too
+
+                        // TODO: verify this claim
+
+                        update_sticky_label(tag_group_id); // TODO: quick hack
+                        jsPlumb.repaint($(this).attr('id'));
+                    }
                 }
-            }
-        }) : $(this).css(pos_css);
+            });
+        }
+        else
+        {
+            $(this).css(pos_css);
+            jsPlumb.repaint($(this).attr('id'));
+        }
 
         // can't use conditional as lvalue... lame!
         if (is_left)
@@ -132,13 +147,26 @@ function layout_tag_group(tag_group_id, animated)
         }
     });
 
-    var height_css =
+    // TODO: when animating, initial height jumps to total height + padding; why?
+    var height_css = {};
+    if (total_height_right == 0) // shrink it into nothing
     {
-        height:Math.max(total_height_left, total_height_right)
-    };
+        height_css['height'] = 0;
+        height_css['padding-top'] = 0;
+        height_css['padding-bottom'] = 0;
+    }
+    else
+    {
+        height_css['height'] = Math.max(total_height_left, total_height_right);
+    }
     animated ? tag_group.animate(height_css,
     {
-        duration:animation_properties.layout_move_time            
+        queue:false,
+        duration:animation_properties.layout_move_time,
+        progress:function()
+        {
+            // console.log(tag_group.css('height'));
+        }    
     }) : tag_group.css(height_css);
 
     update_sticky_label(tag_group_id, animated);
@@ -183,14 +211,26 @@ function update_sticky_label(tag_group_id)
 
         // console.log(parent_position, parent_padded_position);
         var old_position = tag_object.position().top;
-        var new_position = padding_top + Math.min(parent_height - height, Math.max(parent_offset, 0));
+        var new_position = padding_top;
+        var moving_left_tag = true; // TODO: add platform check, move to start of function
+        if (moving_left_tag)
+        {
+            new_position += Math.min(parent_height - height, Math.max(parent_offset, 0));
+        }
 
-        // ANIM
         tag_object.css({ top: new_position + "px" });
 
         if (old_position != new_position)
         {
-            jsPlumb.repaint(tag_id);
+            var connections = jsPlumb.getConnections({ source:$(this).attr('id') });
+
+            $(connections).each(function(i)
+            {
+                if (this.should_repaint)
+                {
+                    jsPlumb.repaint(this.target);
+                }
+            });
         }
     });
 }
@@ -215,11 +255,14 @@ function add_connection(tag1, tag2, connection_type, animated)
 
     console.log(tag_group_id, tag_group_selector, "exists?", $(tag_group_selector).exists());
 
+    var new_tag_group = false;
+
     // does the appropriate tag group exist? if not, create one
     if (!$(tag_group_selector).exists())
     {
         // TODO: access tagtest thru function?
         $("#tagtest").append("<div class='tag_group' id='" + tag_group_id + "'></div>");
+        new_tag_group = true;
     }
 
     // does the tag connection already exist? if so, return
@@ -229,27 +272,103 @@ function add_connection(tag1, tag2, connection_type, animated)
         return;
     }
 
-    // TODO: tag creation into separate function?
+    // Here, we set the preliminary position of each new tag. Even though layout_tag_group provides the "canonical"
+    // layout, we need to do it here so that the animation works out. Ideally, tag creation would be its own function,
+    // but that's currently a bit difficult to do.
+
+    // TODO: tag creation into separate function
+
+    var padding_top = parseFloat($(tag_group_selector).css('padding-top'));
+    var padding_left = parseFloat($(tag_group_selector).css('padding-left'));
+    var padding_right = parseFloat($(tag_group_selector).css('padding-right'));
 
     // does the left tag already exist? if not, create one
     if (!$(tag_group_selector).children(".tag" + ".tag_group_left" + "#" + tag1_id).exists())
     {
+        var pos_css = 
+        {
+            top: padding_top,
+            left: padding_left
+        };
+
         $(tag_group_selector).append("<div class='component window tag tag_group_left' id='" + tag1_id + "'>" + tag1 + "</div>");
+        $("#" + tag1_id).css(pos_css);
+
+        $("#" + tag1_id).click(function()
+        {
+            // set_delete_mode(tag2, connection_type, animated);
+            // delete_connection(tag1, tag2, connection_type, true);
+        });
     }
 
     // ditto right tag
     if (!$(tag_group_selector).children(".tag" + ".tag_group_right" + "#" + tag2_id).exists())
     {
+        var pos_css = 
+        {
+            right: padding_right
+        };
+
+        var last_right_tag_object = $(tag_group_selector).children('.tag_group_right').last();
+
+        if (!last_right_tag_object)
+        {
+            pos_css['top'] = padding_top;
+        }
+        else
+        {
+            // debugger;
+            pos_css['top'] = parseFloat(last_right_tag_object.css('top')) + last_right_tag_object.outerHeight(true) + animation_properties.tag_gap;
+        }
+
         $(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
+        $("#" + tag2_id).css(pos_css);
+
         $("#" + tag2_id).click(function()
         {
             // set_delete_mode(tag2, connection_type, animated);
-            delete_connection(tag1, tag2, connection_type, true);
+            // delete_connection(tag1, tag2, connection_type, true);
+
+            if (jQuery.inArray(_tag_id("asdf", connection_type), _connections_for_tag(tag1_id)) != -1)
+            {
+                delete_connection(tag1, "asdf", connection_type, true);
+            }
+            else
+            {
+                add_connection(tag1, "asdf", connection_type, true);
+            }
         });
     }
 
-    layout_tag_group(tag_group_id, animated);
     _connect_tags(tag1_id, tag2_id);
+
+    if (animated)
+    {
+        var connection = jsPlumb.getConnections(
+        {
+            source:tag1_id,
+            target:tag2_id
+        })[0];
+
+        connection.should_repaint = false;
+
+        $(connection.connector.canvas).hide();
+        $(connection.endpoints[1].canvas).hide();
+        $("#" + tag2_id).hide();
+
+        $(connection.connector.canvas).fadeIn(animation_properties.delete_fade_time);
+        // $(connection.endpoints[0].canvas).fadeIn(animation_properties.delete_fade_time);
+        $(connection.endpoints[1].canvas).fadeIn(animation_properties.delete_fade_time);
+        $("#" + tag2_id).fadeIn(animation_properties.delete_fade_time, function()
+        {
+            connection.should_repaint = true;
+            layout_tag_group(tag_group_id, false); // to make sure it ends in the correct position
+        });
+
+        $("#" + tag2_id).fadeIn(animation_properties.delete_fade_time);
+    }
+
+    layout_tag_group(tag_group_id, animated);
 }
 
 function set_delete_mode(tag, connection_type, animated)
@@ -312,11 +431,14 @@ function delete_connection(tag1, tag2, connection_type, animated)
             target:tag2_id
         })[0];
 
+        connection.should_repaint = false;
+
         $(connection.connector.canvas).fadeOut(animation_properties.delete_fade_time);
         $(connection.endpoints[0].canvas).fadeOut(animation_properties.delete_fade_time);
         $(connection.endpoints[1].canvas).fadeOut(animation_properties.delete_fade_time);
         $("#" + tag2_id).fadeOut(animation_properties.delete_fade_time, function()
         {
+            connection.should_repaint = true;
             remove_connection();
         });
 
@@ -385,9 +507,11 @@ function _connect_tags(tag1_id, tag2_id)
            radius:10,
            // cssClass:"l1arrow",
         },                    
-       });
+    });
 
-       return connection;
+    connection.should_repaint = true;
+
+    return connection;
 }
 
 function _tag_group_id(tag, connection_type)
