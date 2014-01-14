@@ -15,7 +15,7 @@ var ui_properties =
     layout_move_time: 150,
     tag_gap: 5,
     delete_expansion: 75,
-    delete_expansion_time: 100,
+    delete_expansion_time: 150,
     animation: false,
 };
 
@@ -65,8 +65,28 @@ $(window).scroll(function()
     });
 });
 
-$(document).click(function(event)
-{ 
+$(document).click(function(e)
+{
+    // TODO: this is currently dog-slow
+    return;
+
+    var this_id = null;
+    if ($(e.toElement).parent().hasClass('tag'))
+    {
+        this_id = $(e.toElement).parent().attr('id');
+    }
+
+    $('.tag_name').each(function()
+    {
+        if (this_id && $(this).parent().attr('id') == this_id)
+        {
+        }
+        else
+        {
+            set_delete_mode($(this).text(), "to", false, true);
+        }
+    });
+
     // if($(event.target).parents().index($('#menucontainer')) == -1) {
     //     if($('#menucontainer').is(":visible")) {
     //         $('#menucontainer').hide()
@@ -355,9 +375,19 @@ function add_connection(tag1, tag2, connection_type, animated)
                 var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
                 console.log("trying1", tag2, connection_type, false, true);
                 console.log(e);
-                set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
 
-                // delete_connection(tag1, tag2, connection_type, true);
+                console.log($(e.toElement));
+                if ($(e.toElement).hasClass('tag_delete_button'))
+                {
+                    set_delete_mode(tag2, connection_type, false, true);
+                    delete_connection(tag1, tag2, connection_type, true);
+                }
+                else
+                {
+                    set_delete_mode(tag2, connection_type, true, true);
+                }
+
+                
 
                 // if (jQuery.inArray(_tag_id("asdf", connection_type), _connections_for_tag(tag1_id)) != -1)
                 // {
@@ -367,14 +397,6 @@ function add_connection(tag1, tag2, connection_type, animated)
                 // {
                 //     add_connection(tag1, "asdf", connection_type, ui_properties.animation);
                 // }
-            });
-
-            var delete_button_object = $($("#" + tag2_id).children(".tag_delete_button")[0]);
-            delete_button_object.click(function()
-            {
-                console.log("trying2", tag2, connection_type, false, true);
-                set_delete_mode(tag2, connection_type, false, true);
-                // delete_connection(tag1, tag2, connection_type, true);
             });
         }
     }
@@ -414,6 +436,7 @@ function set_delete_mode(tag, connection_type, enabled, animated)
 {
     // TODO: cancel existing animations
     // TODO: cancel animations happening from previous set_delete_mode
+    // TODO: handle multiple clicks
 
     var tag_id = _tag_id(tag, connection_type);
     var tag_selector = "#" + tag_id;
@@ -448,12 +471,12 @@ function set_delete_mode(tag, connection_type, enabled, animated)
     {
         jsPlumb.animate(tag_id, new_size,
         {
-            duration:ui_properties.delete_expansion_time * 3,
+            duration:ui_properties.delete_expansion_time,
             queue:false,
         });
         delete_button_object.animate(show_delete_button,
         {
-            duration:ui_properties.delete_expansion_time * 3,
+            duration:ui_properties.delete_expansion_time,
             queue:false,
             start:function()
             {
