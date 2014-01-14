@@ -19,7 +19,8 @@ var ui_properties =
     animation: false,
 };
 
-var supportsTouch = 'createTouch' in document;
+// var supportsTouch = 'createTouch' in document;
+var supportsTouch = false; // TODO: for now
 
 //////////////////////
 // HELPER FUNCTIONS //
@@ -297,7 +298,10 @@ function add_connection(tag1, tag2, connection_type, animated)
             left: padding_left
         };
 
-        $(tag_group_selector).append("<div class='component window tag tag_group_left' id='" + tag1_id + "'>" + tag1 + "</div>");
+        var inner_html = "<div class='tag_name'>" + tag1 + "</div><div class='tag_delete_button'>&#x2326;</div>";
+        var outer_html = "<div class='component window tag tag_group_left' id='" + tag1_id + "'>" + inner_html + "</div>";
+
+        $(tag_group_selector).append(outer_html);
         $("#" + tag1_id).css(pos_css);
 
         $("#" + tag1_id).click(function()
@@ -327,26 +331,31 @@ function add_connection(tag1, tag2, connection_type, animated)
             pos_css['top'] = parseFloat(last_right_tag_object.css('top')) + last_right_tag_object.outerHeight(true) + ui_properties.tag_gap;
         }
 
-        $(tag_group_selector).append("<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + tag2 + "</div>");
+        var inner_html = "<div class='tag_delete_button'>&#x2326;</div><div class='tag_name'>" + tag2 + "</div>";
+        var outer_html = "<div class='component window tag tag_group_right' id='" + tag2_id + "'>" + inner_html + "</div>";
+        
+        $(tag_group_selector).append(outer_html);
         $("#" + tag2_id).css(pos_css);
 
-        if (supportsTouch)
+        if (supportsTouch) // we need this to have instant feedback on iOS devices
         {
-            $("#" + tag2_id).on(
-            {
-                'touchstart': function()
-                {
-                    var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
-                    set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
-                }
-            });
+            // $("#" + tag2_id).on(
+            // {
+            //     'touchstart': function()
+            //     {
+            //         var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
+            //         set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
+            //     }
+            // });
         }
         else
         {
-            $("#" + tag2_id).click(function()
+            $("#" + tag2_id).click(function(e)
             {
-                // var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
-                // set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
+                var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
+                console.log("trying1", tag2, connection_type, false, true);
+                console.log(e);
+                set_delete_mode(tag2, connection_type, !delete_mode_enabled, true);
 
                 // delete_connection(tag1, tag2, connection_type, true);
 
@@ -358,6 +367,14 @@ function add_connection(tag1, tag2, connection_type, animated)
                 // {
                 //     add_connection(tag1, "asdf", connection_type, ui_properties.animation);
                 // }
+            });
+
+            var delete_button_object = $($("#" + tag2_id).children(".tag_delete_button")[0]);
+            delete_button_object.click(function()
+            {
+                console.log("trying2", tag2, connection_type, false, true);
+                set_delete_mode(tag2, connection_type, false, true);
+                // delete_connection(tag1, tag2, connection_type, true);
             });
         }
     }
@@ -396,32 +413,71 @@ function add_connection(tag1, tag2, connection_type, animated)
 function set_delete_mode(tag, connection_type, enabled, animated)
 {
     // TODO: cancel existing animations
+    // TODO: cancel animations happening from previous set_delete_mode
 
     var tag_id = _tag_id(tag, connection_type);
     var tag_selector = "#" + tag_id;
+
+    var delete_button_object = $($(tag_selector).children(".tag_delete_button")[0]);
+
+    var show_delete_button = {};
+
+    if (enabled)
+    {
+        show_delete_button['left'] = 0;
+    }
+    else
+    {
+        show_delete_button['left'] = '-4em';
+    }
 
     var new_size = {};
 
     if (enabled)
     {
-        new_size['padding-left'] = parseFloat($(tag_selector).css('padding-right')) + ui_properties.delete_expansion;
+        new_size['padding-left'] = '4em';
+        new_size['border-width'] = '3px';
     }
     else
     {
-        new_size['padding-left'] = parseFloat($(tag_selector).css('padding-right'));
+        new_size['padding-left'] = 0;
+        new_size['border-width'] = '1px';
     }
 
     if (animated)
     {
         jsPlumb.animate(tag_id, new_size,
         {
-            duration:ui_properties.delete_expansion_time,
+            duration:ui_properties.delete_expansion_time * 3,
+            queue:false,
+        });
+        delete_button_object.animate(show_delete_button,
+        {
+            duration:ui_properties.delete_expansion_time * 3,
+            queue:false,
+            start:function()
+            {
+                if (enabled)
+                {
+                    delete_button_object.css({ 'visibility':'visible' });
+                }
+
+            },
+            done:function()
+            {
+                if (!enabled)
+                {
+                    delete_button_object.css({ 'visibility':'hidden' });
+                }
+            },
         });
         // $(tag_selector).animate(new_size);
     }
     else
     {
         $(tag_selector).css(new_size);
+        delete_button_object.css(show_delete_button);
+        delete_button_object.css({ 'visibility':(enabled ? 'visible' : 'hidden') });
         jsPlumb.repaint(tag_id);
     }
 
@@ -596,11 +652,11 @@ $(function()
     {
         init:function()
         {
-            jsPlumb.importDefaults(
-            {
-                DragOptions : { cursor: "pointer", zIndex:2000 },
-                HoverClass:"connector-hover"
-            });
+            // jsPlumb.importDefaults(
+            // {
+            //     DragOptions : { cursor: "pointer", zIndex:2000 },
+            //     HoverClass:"connector-hover"
+            // });
 
             create_sample_data();
         }
