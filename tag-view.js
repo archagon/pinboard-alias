@@ -67,9 +67,6 @@ $(window).scroll(function()
 
 $(document).click(function(e)
 {
-    // TODO: this is currently dog-slow
-    return;
-
     var this_id = null;
     if ($(e.toElement).parent().hasClass('tag'))
     {
@@ -83,7 +80,11 @@ $(document).click(function(e)
         }
         else
         {
-            set_delete_mode($(this).text(), "to", false, true);
+            // TODO: ultra-kludgy
+            if ($($(this).parent().children('.tag_delete_button')[0]).css('visibility') == 'visible')
+            {
+                set_delete_mode($(this).text(), "to", false, true);
+            }
         }
     });
 
@@ -373,10 +374,7 @@ function add_connection(tag1, tag2, connection_type, animated)
             $("#" + tag2_id).click(function(e)
             {
                 var delete_mode_enabled = $("#" + tag2_id).attr('delete_mode') == "true" ? true : false
-                console.log("trying1", tag2, connection_type, false, true);
-                console.log(e);
 
-                console.log($(e.toElement));
                 if ($(e.toElement).hasClass('tag_delete_button'))
                 {
                     set_delete_mode(tag2, connection_type, false, true);
@@ -437,6 +435,8 @@ function set_delete_mode(tag, connection_type, enabled, animated)
     // TODO: cancel existing animations
     // TODO: cancel animations happening from previous set_delete_mode
     // TODO: handle multiple clicks
+
+    console.log("setting delete mode for", tag)
 
     var tag_id = _tag_id(tag, connection_type);
     var tag_selector = "#" + tag_id;
