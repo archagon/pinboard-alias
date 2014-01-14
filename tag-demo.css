@@ -17,3 +17,35 @@
 	/*position:relative;*/
 	overflow:hidden;
 }
+
+.tag
+{
+	vertical-align:middle;
+	overflow:hidden;
+	display:table;
+	table-layout:fixed;
+}
+
+.tag_delete_button
+{
+	vertical-align:inherit;
+	width:3em;
+	position:absolute;
+	left:-4em;
+	height:100%;
+	/*width:0em;*/
+	visibility:hidden;
+	display:table-cell;
+	padding:0.5em;
+	background-color:red;
+	overflow:hidden;
+}
+
+.tag_name
+{
+	vertical-align:inherit;
+	display:table-cell;
+	padding:0.5em;
+	overflow:hidden;
+	width:100%;
+}

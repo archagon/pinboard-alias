@@ -35,7 +35,6 @@
 {
   font-size:13px; 
   padding:8px;
-  padding:8px;
 }
 
 .component
@@ -46,7 +45,7 @@
   filter:alpha(opacity=80);
   background-color:white;
   color:black;
-  padding:0.5em;   
+  /*padding:0.5em;*/
   font-size:1.4em;
 }
 
@@ -74,7 +73,7 @@
   width:5em; height:5em;        
   position:absolute;    
   color:black;
-  padding:0.5em;
+  /*padding:0.5em;*/
   width:7em;
   height:1.5em;
   line-height:1.5em;
